@@ -215,5 +215,6 @@ def write_segm_img(path, image, labels, palette="detail", alpha=0.5):
     out = Image.blend(img, seg, alpha)
 
     out.save(path + ".png")
+    seg.save(path + "_seg" + ".png")
 
     return
