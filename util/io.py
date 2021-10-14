@@ -1,15 +1,18 @@
 """Utils for monoDepth.
 """
+import json
 import sys
 import re
-import numpy as np
+
 import cv2
 import torch
-
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from PIL import Image
 
 
-from .pallete import get_mask_pallete
+from .palette import get_mask_palette, import_ade20k_classes
 
 def read_pfm(path):
     """Read pfm file.
@@ -198,7 +201,7 @@ def write_depth(path, depth, bits=1, absolute_depth=False):
     return
 
 
-def write_segm_img(path, image, labels, palette="detail", alpha=0.5):
+def write_segm_img(path, image, predicted_labels, alpha=0.5):
     """Write depth map to pfm and png file.
 
     Args:
@@ -207,9 +210,9 @@ def write_segm_img(path, image, labels, palette="detail", alpha=0.5):
         labels (array): labeling of the image
     """
 
-    mask = get_mask_pallete(labels, "ade20k")
+    mask = get_mask_palette(predicted_labels, "ade20k")
 
-    img = Image.fromarray(np.uint8(255*image)).convert("RGBA")
+    img = Image.fromarray(np.uint8(255 * image)).convert("RGBA")
     seg = mask.convert("RGBA")
 
     out = Image.blend(img, seg, alpha)
@@ -217,4 +220,23 @@ def write_segm_img(path, image, labels, palette="detail", alpha=0.5):
     out.save(path + ".png")
     seg.save(path + "_seg" + ".png")
 
-    return
+    # Generate a segmentation image with colour labels.
+    ade20k_classes = import_ade20k_classes()
+    detected_classes = np.unique(predicted_labels)
+    legend = list()
+    
+    # Get the legend colours for all of the detected classes
+    for cls in detected_classes:
+        ade20k_cls = ade20k_classes[str(cls)]
+        legend.append([ade20k_cls['color'], ade20k_cls['name']])
+    
+    # Generate the legend graphic
+    labels = [name for color, name in legend]
+    handles = [Rectangle((0, 0), 1, 1, color=tuple([value / 255 for value in color])) for color, name in legend]
+    
+    plt.imshow(out)
+    
+    # Move the legend outside of the image
+    plt.legend(handles, labels, loc=(1.05, 0))
+    plt.savefig(path + "_plot" + ".png", bbox_inches='tight')
+    
