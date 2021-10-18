@@ -163,11 +163,15 @@ class Resize(object):
             sample["image"].shape[1], sample["image"].shape[0]
         )
 
+        interpolation_method = self.__image_interpolation_method
+        if width <= sample["image"].shape[1] or height <= sample["image"].shape[0]:
+            interpolation_method = cv2.INTER_AREA
+        
         # resize sample
         sample["image"] = cv2.resize(
             sample["image"],
             (width, height),
-            interpolation=self.__image_interpolation_method,
+            interpolation=interpolation_method,
         )
 
         if self.__resize_target:

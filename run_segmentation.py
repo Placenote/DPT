@@ -9,6 +9,7 @@ import torch
 import torch.nn.functional as F
 
 import util.io
+import numpy as np
 
 from torchvision.transforms import Compose
 from dpt.models import DPTSegmentationModel
@@ -48,10 +49,8 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         assert (
             False
         ), f"model_type '{model_type}' not implemented, use: --model_type [dpt_large|dpt_hybrid]"
-
-    transform = Compose(
-        [
-            Resize(
+    
+    resizer = Resize(
                 net_w,
                 net_h,
                 resize_target=None,
@@ -59,7 +58,10 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                 ensure_multiple_of=32,
                 resize_method="minimal",
                 image_interpolation_method=cv2.INTER_CUBIC,
-            ),
+            )
+    
+    transform = Compose(
+        [
             NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
             PrepareForNet(),
         ]
@@ -86,8 +88,16 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
 
         print("  processing {} ({}/{})".format(img_name, ind + 1, num_images))
 
-        # input
         img = util.io.read_image(img_name)
+        
+        # Resize the image and save it.
+        img = resizer({"image": img})['image']
+        resized_img = (img * 255).astype(np.uint8)
+        resized_img = cv2.cvtColor(resized_img, cv2.COLOR_RGB2BGR)
+        resized_img_name = os.path.basename(img_name).split(".")[0] + "_resized.png"
+        resized_img_path = os.path.join(output_path, resized_img_name)
+        cv2.imwrite(resized_img_path, resized_img)
+        
         img_input = transform({"image": img})["image"]
 
         # compute
@@ -98,7 +108,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                 sample = sample.half()
 
             out = model.forward(sample)
-
+            
             prediction = torch.nn.functional.interpolate(
                 out, size=img.shape[:2], mode="bicubic", align_corners=False
             )
