@@ -93,23 +93,15 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             False
         ), f"model_type '{model_type}' not implemented, use: --model_type [dpt_large|dpt_hybrid|dpt_hybrid_kitti|dpt_hybrid_nyu|midas_v21]"
 
-    resizer = Resize(
-            net_w,
-            net_h,
-            resize_target=None,
-            keep_aspect_ratio=True,
-            ensure_multiple_of=32,
-            resize_method="minimal",
-            image_interpolation_method=cv2.INTER_CUBIC,
-        )
-
     transform = Compose(
         [
+            Resize(net_w, net_h, resize_target=None, keep_aspect_ratio=True,
+                ensure_multiple_of=32, resize_method="minimal",
+                image_interpolation_method=cv2.INTER_CUBIC),
             NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
             PrepareForNet(),
         ]
     )
-
 
     model.eval()
 
@@ -142,14 +134,6 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             left = (width - 1216) // 2
             img = img[top : top + 352, left : left + 1216, :]
         
-        # Resize the image and save it.
-        img = resizer({"image": img})['image']
-        resized_img = (img * 255).astype(np.uint8)
-        resized_img = cv2.cvtColor(resized_img, cv2.COLOR_RGB2BGR)
-        resized_img_name = os.path.basename(img_name).split(".")[0] + "_resized.png"
-        resized_img_path = os.path.join(output_path, resized_img_name)
-        cv2.imwrite(resized_img_path, resized_img)
-        
         img_input = transform({"image": img})["image"]
 
         # compute
@@ -180,7 +164,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                 prediction *= 1000.0
 
         filename = os.path.join(
-            output_path, os.path.splitext(os.path.basename(img_name))[0]
+            output_path, os.path.splitext(os.path.basename(img_name))[0] + "_depth"
         )
         util.io.write_depth(filename, prediction, bits=2, absolute_depth=args.absolute_depth)
 
