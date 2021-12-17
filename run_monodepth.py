@@ -46,6 +46,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         net_w = net_h = 384
         model = DPTDepthModel(
             path=model_path,
+            invert=True,
             backbone="vitb_rn50_384",
             non_negative=True,
             enable_attention_hooks=False,
@@ -202,7 +203,7 @@ if __name__ == "__main__":
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")
 
-    parser.set_defaults(optimize=True)
+    parser.set_defaults(optimize=False)
     parser.set_defaults(kitti_crop=False)
     parser.set_defaults(absolute_depth=False)
 

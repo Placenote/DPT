@@ -181,7 +181,16 @@ def write_depth(path, depth, bits=1, absolute_depth=False):
     # write_pfm(path + ".pfm", depth.astype(np.float32))
 
     if absolute_depth:
-        out = depth
+        # Ensure the depth is in a reasonable range.
+        out = depth * 1000
+        
+        out[out > 10] = 0.0
+        out[out < 0] = 0
+        
+        outfile = path + ".npy"
+        
+        with open(outfile, 'wb') as f:
+            np.save(f, out)
     else:
         depth_min = depth.min()
         depth_max = depth.max()
@@ -193,10 +202,10 @@ def write_depth(path, depth, bits=1, absolute_depth=False):
         else:
             out = np.zeros(depth.shape, dtype=depth.dtype)
 
-    if bits == 1:
-        cv2.imwrite(path + ".png", out.astype("uint8"), [cv2.IMWRITE_PNG_COMPRESSION, 0])
-    elif bits == 2:
-        cv2.imwrite(path + ".png", out.astype("uint16"), [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        if bits == 1:
+            cv2.imwrite(path + ".png", out.astype("uint8"), [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        elif bits == 2:
+            cv2.imwrite(path + ".png", out.astype("uint16"), [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
     return
 
